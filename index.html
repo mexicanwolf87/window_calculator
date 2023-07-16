@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Window Quote Calculator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        padding: 20px;
+      }
+
+      .input-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+        background: #fff;
+        border-radius: 5px;
+        padding: 15px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .input-row div {
+        flex: 1;
+        min-width: 150px;
+        margin: 5px;
+      }
+
+      button {
+        margin: 5px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background: #007bff;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Window Quote Calculator</h1>
+
+    <div id="inputArea"></div>
+
+    <button onclick="addRow()">Add Item</button>
+    <button onclick="generatePDF()">Generate PDF</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js"></script>
+    <script>
+      function addRow() {
+        var inputArea = document.getElementById("inputArea");
+
+        var newRow = document.createElement("div");
+        newRow.className = "input-row";
+
+        var quantityInput = newRow.appendChild(
+          createInputLabel("Quantity:", "input")
+        );
+        newRow.appendChild(
+          createInputLabel("Type:", "select", ["Window", "Door"])
+        );
+        var widthInput = newRow.appendChild(
+          createInputLabel("Width:", "input")
+        );
+        var heightInput = newRow.appendChild(
+          createInputLabel("Height:", "input")
+        );
+        newRow.appendChild(
+          createInputLabel("Panel Configuration:", "select", [
+            "XO",
+            "OX",
+            "XOX",
+            "OXO",
+          ])
+        );
+        newRow.appendChild(
+          createInputLabel("Color:", "select", ["White", "Brown", "Gold"])
+        );
+        var gridCheckbox = newRow.appendChild(
+          createInputLabel("Grid:", "checkbox")
+        );
+        newRow.appendChild(
+          createInputLabel("Grid Pattern:", "select", [
+            "2W X 3H",
+            "W X 3H",
+            "Standard",
+          ])
+        );
+        newRow.appendChild(
+          createInputLabel("Glass Type:", "select", ["LowE 3", "Clear"])
+        );
+        newRow.appendChild(
+          createInputLabel("Series:", "select", ["4800", "4850", "4855"])
+        );
+        newRow.appendChild(createInputLabel("Notes:", "textarea"));
+
+        var priceLabel = document.createElement("label");
+        priceLabel.textContent = "Price: $";
+        var priceSpan = document.createElement("span");
+        priceLabel.appendChild(priceSpan);
+        newRow.appendChild(priceLabel);
+
+        var removeButton = document.createElement("button");
+        removeButton.textContent = "Remove";
+        removeButton.onclick = function () {
+          inputArea.removeChild(newRow);
+        };
+        newRow.appendChild(removeButton);
+
+        inputArea.appendChild(newRow);
+
+        var updatePrice = function () {
+          var quantity = parseFloat(quantityInput.children[1].value) || 0;
+          var width = parseFloat(widthInput.children[1].value) || 0;
+          var height = parseFloat(heightInput.children[1].value) || 0;
+          var gridChecked = gridCheckbox.children[1].checked;
+          var price = (width + height) * 5 * quantity;
+          if (gridChecked) {
+            price *= 1.2;
+          }
+          priceSpan.textContent = price.toFixed(2);
+        };
+        quantityInput.children[1].addEventListener("input", updatePrice);
+        widthInput.children[1].addEventListener("input", updatePrice);
+        heightInput.children[1].addEventListener("input", updatePrice);
+        gridCheckbox.children[1].addEventListener("change", updatePrice);
+        updatePrice();
+      }
+
+      function createInputLabel(labelText, inputType, selectOptions) {
+        var container = document.createElement("div");
+
+        var label = document.createElement("label");
+        label.textContent = labelText;
+        container.appendChild(label);
+
+        if (inputType === "select") {
+          var input = document.createElement("select");
+          selectOptions.forEach(function (option) {
+            var opt = document.createElement("option");
+            opt.value = option;
+            opt.text = option;
+            input.appendChild(opt);
+          });
+        } else if (inputType === "textarea") {
+          var input = document.createElement("textarea");
+        } else {
+          var input = document.createElement("input");
+          input.type = inputType;
+        }
+
+        container.appendChild(input);
+
+        return container;
+      }
+
+      // Add initial row
+      addRow();
+
+      function generatePDF() {
+        var doc = new jsPDF();
+        var inputRows = document.getElementsByClassName("input-row");
+
+        doc.setFontSize(12);
+        var lineHeight = doc.internal.getLineHeight();
+        var pageHeight = doc.internal.pageSize.height;
+
+        var x = 10;
+        var y = 10;
+
+        for (var i = 0; i < inputRows.length; i++) {
+          if (y + lineHeight > pageHeight) {
+            doc.addPage();
+            y = 10;
+          }
+
+          doc.text("Item " + (i + 1), x, y);
+
+          var inputs = inputRows[i].getElementsByTagName("input");
+          var selects = inputRows[i].getElementsByTagName("select");
+          var textarea = inputRows[i].getElementsByTagName("textarea");
+          var price = inputRows[i].getElementsByTagName("span")[0].textContent;
+
+          var data = [];
+          for (var j = 0; j < inputs.length; j++) {
+            data.push(
+              inputs[j].previousSibling.textContent + " " + inputs[j].value
+            );
+          }
+          for (var j = 0; j < selects.length; j++) {
+            data.push(
+              selects[j].previousSibling.textContent +
+                " " +
+                selects[j].options[selects[j].selectedIndex].value
+            );
+          }
+          for (var j = 0; j < textarea.length; j++) {
+            data.push(
+              textarea[j].previousSibling.textContent + " " + textarea[j].value
+            );
+          }
+
+          // Creating a simple table-like structure
+          for (var j = 0; j < data.length; j++) {
+            y += lineHeight;
+            if (y + lineHeight > pageHeight) {
+              doc.addPage();
+              y = 10;
+            }
+            doc.text(data[j], x, y);
+          }
+          y += lineHeight;
+          doc.text("Price: $" + price, x, y);
+
+          // Add some space between items
+          y += lineHeight * 2;
+        }
+
+        doc.save("Quote.pdf");
+      }
+    </script>
+  </body>
+</html>
